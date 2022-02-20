@@ -1,12 +1,23 @@
 package kz.zhanbolat.di.injector;
 
 import kz.zhanbolat.di.exception.InjectionException;
+import kz.zhanbolat.di.injector.util.DependencyInjectionUtil;
+import kz.zhanbolat.di.injector.util.DependencyInjectionUtilImpl;
 
 import java.lang.reflect.Field;
-import java.util.Arrays;
 import java.util.Objects;
 
-public class FieldAnnotationInjectorImpl implements FieldAnnotationInjector {
+public class FieldDependencyInjector implements DependencyInjector {
+    private DependencyInjectionUtil dependencyInjectionUtil;
+
+    public FieldDependencyInjector() {
+        dependencyInjectionUtil = new DependencyInjectionUtilImpl();
+    }
+
+    public FieldDependencyInjector(DependencyInjectionUtil dependencyInjectionUtil) {
+        this.dependencyInjectionUtil = dependencyInjectionUtil;
+    }
+
     @Override
     public void injectDependency(String dependencyName, Object object, Object dependency) throws InjectionException {
         if (Objects.isNull(object) || Objects.isNull(dependency)) {
@@ -21,34 +32,13 @@ public class FieldAnnotationInjectorImpl implements FieldAnnotationInjector {
             throw new InjectionException("No dependency " + dependencyName + " exists in " + injectedClass.getName());
         }
         try {
-            if (field.getType().equals(dependency.getClass()) ||
-                    isInterfacesMatch(dependency.getClass().getInterfaces(), field.getType()) ||
-                    isSuperclassMatch(field.getType(), dependency.getClass())) {
+            if (dependencyInjectionUtil.isDependencyClassMatch(field.getType(), dependency.getClass())) {
                 field.setAccessible(true);
                 field.set(object, dependency);
             }
         } catch (IllegalAccessException e) {
             throw new InjectionException(e.getMessage(), e);
         }
-    }
-
-    private boolean isInterfacesMatch(Class<?>[] interfaces, Class<?> fieldInterface) {
-        if (Objects.isNull(interfaces) || interfaces.length == 0) {
-            return false;
-        }
-        return Arrays.asList(interfaces).contains(fieldInterface);
-    }
-
-    private boolean isSuperclassMatch(Class<?> fieldClass, Class<?> dependencyClass) {
-        Class<?> dependencyClassSuperclass = dependencyClass.getSuperclass();
-        while (Objects.nonNull(dependencyClassSuperclass)) {
-            if (fieldClass.equals(dependencyClassSuperclass)) {
-                return true;
-            } else {
-                dependencyClassSuperclass = dependencyClassSuperclass.getSuperclass();
-            }
-        }
-        return false;
     }
 
     private Field getField(Class<?> injectClass, String dependencyName) {

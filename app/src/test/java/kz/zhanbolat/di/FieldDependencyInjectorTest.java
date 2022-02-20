@@ -5,7 +5,7 @@ package kz.zhanbolat.di;
 
 import kz.zhanbolat.di.implinjection.ClientImplInjection;
 import kz.zhanbolat.di.implinjection.ServiceImplInjection;
-import kz.zhanbolat.di.injector.FieldAnnotationInjectorImpl;
+import kz.zhanbolat.di.injector.FieldDependencyInjector;
 import kz.zhanbolat.di.interfacteinjection.Client;
 import kz.zhanbolat.di.interfacteinjection.ServiceImpl;
 import kz.zhanbolat.di.parentinjeciton.ClientChild;
@@ -14,12 +14,12 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import static org.junit.jupiter.api.Assertions.*;
 
-class FieldAnnotationInjectorImplTest {
-    private FieldAnnotationInjectorImpl dependencyInjector;
+class FieldDependencyInjectorTest {
+    private FieldDependencyInjector dependencyInjector;
 
     @BeforeEach
     void setUp() {
-        dependencyInjector = new FieldAnnotationInjectorImpl();
+        dependencyInjector = new FieldDependencyInjector();
     }
 
     @Test void appHasAGreeting() throws Exception {
