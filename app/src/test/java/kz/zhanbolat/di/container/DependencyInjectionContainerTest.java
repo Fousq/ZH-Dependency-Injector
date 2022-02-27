@@ -4,6 +4,8 @@ import kz.zhanbolat.di.container.configuration.*;
 import kz.zhanbolat.di.exception.BeanInitializationException;
 import org.junit.jupiter.api.Test;
 
+import java.math.BigDecimal;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 class DependencyInjectionContainerTest {
@@ -47,5 +49,15 @@ class DependencyInjectionContainerTest {
         BeanInitializationException exception = assertThrows(BeanInitializationException.class,
                 () -> new ClassConfigurationDependencyInjectionContainer(NoBeanMethodForInjectParameterConfiguration.class));
         assertTrue(exception.getMessage().contains("There's no bean init method for name"));
+    }
+
+    @Test
+    void givenConfigurationWithSeveralBeanMethods_whenGetBean_thenReturnBeanByClass() {
+        dependencyInjectionContainer = new ClassConfigurationDependencyInjectionContainer(ParameterConfiguration.class);
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean(BigDecimal.class);
+        Integer integerBean = dependencyInjectionContainer.getBean(Integer.class);
+
+        assertNotNull(bigDecimalBean);
+        assertNotNull(integerBean);
     }
 }

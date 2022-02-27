@@ -4,6 +4,7 @@ import kz.zhanbolat.di.annotations.Bean;
 import kz.zhanbolat.di.annotations.BeanConfiguration;
 import kz.zhanbolat.di.annotations.Inject;
 import kz.zhanbolat.di.exception.BeanInitializationException;
+import kz.zhanbolat.di.util.PairGeneric;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -16,7 +17,7 @@ import java.util.stream.Stream;
 
 public class ClassConfigurationDependencyInjectionContainer implements DependencyInjectionContainer {
     
-    private final Map<String, Object> beanMap;
+    private final Map<PairGeneric<String, Class<?>>, Object> beanMap;
     
     public ClassConfigurationDependencyInjectionContainer(Class<?> configurationClass) {
         beanMap = new ConcurrentHashMap<>();
@@ -25,9 +26,26 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
     
     @Override
     public Object getBean(String beanName) {
-        return beanMap.get(beanName);
+        return beanMap.entrySet().stream()
+                .filter(entry -> entry.getKey().getKey().equals(beanName))
+                .map(Map.Entry::getValue)
+                .findFirst().orElse(null);
     }
-    
+
+    @Override
+    public <T> T getBean(String beanName, Class<T> beanClass) {
+        Object bean = getBean(beanName);
+        return Objects.nonNull(bean) ? beanClass.cast(bean) : null;
+    }
+
+    @Override
+    public <T> T getBean(Class<T> beanClass) {
+        return beanMap.entrySet().stream()
+                .filter(entry -> entry.getKey().getValue().equals(beanClass))
+                .map(Map.Entry::getValue)
+                .findFirst().map(beanClass::cast).orElse(null);
+    }
+
     private void initializeBeanMap(Class<?> configurationClass) {
         BeanConfiguration annotation = configurationClass.getAnnotation(BeanConfiguration.class);
         if (Objects.isNull(annotation)) {
@@ -63,7 +81,7 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
             throw new IllegalArgumentException("Method " + method.getName() + " is not annotated with annotation @Bean");
         }
         Bean beanAnnotation = method.getAnnotation(Bean.class);
-        if (beanMap.containsKey(beanAnnotation.name())) {
+        if (Objects.nonNull(getBean(beanAnnotation.name()))) {
             return;
         }
 
@@ -78,16 +96,16 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
             if (parameters.length > 0) {
                 Object[] injectBeans = Arrays.stream(parameters).map(parameter -> {
                     Inject injectAnnotation = parameter.getAnnotation(Inject.class);
-                    if (!beanMap.containsKey(injectAnnotation.beanName())) {
+                    if (Objects.isNull(getBean(injectAnnotation.beanName()))) {
                         initializeTargetedBean(configurationInstance, injectAnnotation.beanName());
                     }
-                    return beanMap.get(injectAnnotation.beanName());
+                    return getBean(injectAnnotation.beanName());
                 }).toArray();
                 bean = method.invoke(configurationInstance, injectBeans);
             } else {
                 bean = method.invoke(configurationInstance);
             }
-            beanMap.put(beanAnnotation.name(), bean);
+            beanMap.put(new PairGeneric<>(beanAnnotation.name(), method.getReturnType()), bean);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new BeanInitializationException("Bean cannot be initialized", e);
         }
