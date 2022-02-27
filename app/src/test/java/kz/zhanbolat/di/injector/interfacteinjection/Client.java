@@ -1,10 +1,10 @@
-package kz.zhanbolat.di.interfacteinjection;
+package kz.zhanbolat.di.injector.interfacteinjection;
 
 import kz.zhanbolat.di.annotations.Inject;
 
 public class Client {
 
-    @Inject
+    @Inject(beanName = "")
     private Service service;
 
     public Service getService() {

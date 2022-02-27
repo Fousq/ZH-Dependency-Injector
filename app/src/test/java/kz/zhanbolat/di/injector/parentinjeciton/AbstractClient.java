@@ -1,10 +1,10 @@
-package kz.zhanbolat.di.parentinjeciton;
+package kz.zhanbolat.di.injector.parentinjeciton;
 
 import kz.zhanbolat.di.annotations.Inject;
 
 public abstract class AbstractClient {
 
-    @Inject
+    @Inject(beanName = "")
     private AbstractService service;
 
     public AbstractService getService() {
