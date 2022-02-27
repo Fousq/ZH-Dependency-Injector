@@ -9,8 +9,13 @@ import java.math.BigDecimal;
 @BeanConfiguration
 public class NoBeanMethodForInjectParameterConfiguration {
 
-    @Bean(name = "bigDecimalBean")
-    public BigDecimal bigDecimalBean(@Inject(beanName = "integerBean") Integer integer) {
+    @Bean(name = "bigDecimalBeanByName")
+    public BigDecimal bigDecimalBeanByBeanName(@Inject(beanName = "integerBean") Integer integer) {
+        return BigDecimal.valueOf(integer);
+    }
+
+    @Bean(name = "bigDecimalBeanByClass")
+    public BigDecimal bigDecimalBeanByClass(Integer integer) {
         return BigDecimal.valueOf(integer);
     }
 

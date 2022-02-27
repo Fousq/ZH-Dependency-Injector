@@ -12,4 +12,9 @@ public class NoInjectOnParameterConfiguration {
     public BigDecimal bigDecimalBean(Integer integer) {
         return BigDecimal.valueOf(integer);
     }
+
+    @Bean(name = "integerBean")
+    public Integer integerBean() {
+        return Integer.MAX_VALUE;
+    }
 }

@@ -4,7 +4,7 @@ import kz.zhanbolat.di.annotations.Inject;
 
 public abstract class AbstractClient {
 
-    @Inject(beanName = "")
+    @Inject
     private AbstractService service;
 
     public AbstractService getService() {

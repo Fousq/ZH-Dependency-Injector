@@ -2,6 +2,7 @@ package kz.zhanbolat.di.container;
 
 import kz.zhanbolat.di.container.configuration.*;
 import kz.zhanbolat.di.exception.BeanInitializationException;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -38,10 +39,10 @@ class DependencyInjectionContainerTest {
     }
 
     @Test
-    void givenConfigurationWithoutInjectOnParameter_whenCreate_thenThrowException() {
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> new ClassConfigurationDependencyInjectionContainer(NoInjectOnParameterConfiguration.class));
-        assertEquals("Method's parameters are not annotated with annotation @Inject", exception.getMessage());
+    void givenConfigurationWithoutInjectOnParameter_whenGetBean_thenReturnBean() {
+        dependencyInjectionContainer = new ClassConfigurationDependencyInjectionContainer(NoInjectOnParameterConfiguration.class);
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
+        assertNotNull(bigDecimalBean);
     }
 
     @Test
@@ -59,5 +60,22 @@ class DependencyInjectionContainerTest {
 
         assertNotNull(bigDecimalBean);
         assertNotNull(integerBean);
+    }
+
+    @Test
+    void givenConfigurationWithSameInjectClass_whenCreate_thenThrowException() {
+        BeanInitializationException exception = assertThrows(BeanInitializationException.class,
+                () -> new ClassConfigurationDependencyInjectionContainer(SameInjectClassConfiguration.class));
+        assertEquals("Cannot inject with several class match beans. Please, specify the required bean by its name",
+                exception.getMessage());
+    }
+
+    @Test
+    @Disabled("Strange behaviour when running with test #givenConfigurationWithSameInjectClass_whenCreate_thenThrowException")
+    void givenConfigurationWithSameInjectClassOnInjectAnnotation_whenCreate_thenThrowException() {
+        BeanInitializationException exception = assertThrows(BeanInitializationException.class,
+                () -> new ClassConfigurationDependencyInjectionContainer(SameInjectClassOnInjectAnnotationConfiguration.class));
+        assertEquals("Cannot inject with several class match beans. Please, specify the required bean by its name",
+                exception.getMessage());
     }
 }

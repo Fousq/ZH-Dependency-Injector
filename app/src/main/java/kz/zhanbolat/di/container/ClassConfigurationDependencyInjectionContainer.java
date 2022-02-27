@@ -10,9 +10,11 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Parameter;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class ClassConfigurationDependencyInjectionContainer implements DependencyInjectionContainer {
@@ -76,6 +78,23 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
         initializeBean(configurationInstance, injectBeanInitMethod);
     }
 
+    private void initializeTargetedBean(Object configurationInstance, Class<?> beanClass) {
+        Class<?> configurationClass = configurationInstance.getClass();
+        List<Method> injectBeanInitMethods = Arrays.stream(configurationClass.getMethods())
+                .filter(beanMethod -> {
+                    Bean beanAnnotation = beanMethod.getAnnotation(Bean.class);
+                    return Objects.nonNull(beanAnnotation) && beanMethod.getReturnType().equals(beanClass);
+                }).collect(Collectors.toList());
+        if (injectBeanInitMethods.isEmpty()) {
+            throw new BeanInitializationException("There's no bean init method for class " + beanClass.getName());
+        }
+        if (injectBeanInitMethods.size() > 1) {
+            throw new BeanInitializationException("Cannot inject with several class match beans. " +
+                    "Please, specify the required bean by its name");
+        }
+        initializeBean(configurationInstance, injectBeanInitMethods.get(0));
+    }
+
     private void initializeBean(Object configurationInstance, Method method) {
         if (Objects.isNull(method.getAnnotation(Bean.class))) {
             throw new IllegalArgumentException("Method " + method.getName() + " is not annotated with annotation @Bean");
@@ -84,23 +103,13 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
         if (Objects.nonNull(getBean(beanAnnotation.name()))) {
             return;
         }
-
-        Parameter[] parameters = method.getParameters();
-        boolean noParameterInjection = Arrays.stream(parameters)
-                .anyMatch(parameter -> Objects.isNull(parameter.getAnnotation(Inject.class)));
-        if (noParameterInjection) {
-            throw new IllegalArgumentException("Method's parameters are not annotated with annotation @Inject");
-        }
         try {
             Object bean;
+            Parameter[] parameters = method.getParameters();
             if (parameters.length > 0) {
-                Object[] injectBeans = Arrays.stream(parameters).map(parameter -> {
-                    Inject injectAnnotation = parameter.getAnnotation(Inject.class);
-                    if (Objects.isNull(getBean(injectAnnotation.beanName()))) {
-                        initializeTargetedBean(configurationInstance, injectAnnotation.beanName());
-                    }
-                    return getBean(injectAnnotation.beanName());
-                }).toArray();
+                Object[] injectBeans = Arrays.stream(parameters)
+                        .map(parameter -> getInjectBean(configurationInstance, parameter))
+                        .toArray();
                 bean = method.invoke(configurationInstance, injectBeans);
             } else {
                 bean = method.invoke(configurationInstance);
@@ -108,6 +117,23 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
             beanMap.put(new PairGeneric<>(beanAnnotation.name(), method.getReturnType()), bean);
         } catch (IllegalAccessException | InvocationTargetException e) {
             throw new BeanInitializationException("Bean cannot be initialized", e);
+        }
+    }
+
+    private Object getInjectBean(Object configurationInstance, Parameter parameter) {
+        Inject injectAnnotation = parameter.getAnnotation(Inject.class);
+        if (Objects.nonNull(injectAnnotation) && !injectAnnotation.beanName().isEmpty()) {
+            String injectBeanName = injectAnnotation.beanName();
+            if (Objects.isNull(getBean(injectBeanName))) {
+                initializeTargetedBean(configurationInstance, injectBeanName);
+            }
+            return getBean(injectBeanName);
+        } else {
+            Class<?> injectClass = parameter.getType();
+            if (Objects.isNull(getBean(injectClass))) {
+                initializeTargetedBean(configurationInstance, injectClass);
+            }
+            return getBean(injectClass);
         }
     }
 }

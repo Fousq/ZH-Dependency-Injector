@@ -8,5 +8,5 @@ import java.lang.annotation.Target;
 @Target({ElementType.FIELD, ElementType.CONSTRUCTOR, ElementType.PARAMETER})
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Inject {
-    String beanName();
+    String beanName() default "";
 }
