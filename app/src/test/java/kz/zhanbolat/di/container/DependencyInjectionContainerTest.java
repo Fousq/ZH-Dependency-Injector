@@ -2,7 +2,7 @@ package kz.zhanbolat.di.container;
 
 import kz.zhanbolat.di.container.configuration.*;
 import kz.zhanbolat.di.exception.BeanInitializationException;
-import org.junit.jupiter.api.Disabled;
+import kz.zhanbolat.di.exception.MultipleBeanException;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -53,7 +53,7 @@ class DependencyInjectionContainerTest {
     }
 
     @Test
-    void givenConfigurationWithSeveralBeanMethods_whenGetBean_thenReturnBeanByClass() {
+    void givenConfigurationWithSeveralBeanMethods_whenGetBean_thenReturnBeanByClass() throws MultipleBeanException {
         dependencyInjectionContainer = new ClassConfigurationDependencyInjectionContainer(ParameterConfiguration.class);
         BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean(BigDecimal.class);
         Integer integerBean = dependencyInjectionContainer.getBean(Integer.class);
@@ -66,16 +66,13 @@ class DependencyInjectionContainerTest {
     void givenConfigurationWithSameInjectClass_whenCreate_thenThrowException() {
         BeanInitializationException exception = assertThrows(BeanInitializationException.class,
                 () -> new ClassConfigurationDependencyInjectionContainer(SameInjectClassConfiguration.class));
-        assertEquals("Cannot inject with several class match beans. Please, specify the required bean by its name",
-                exception.getMessage());
+        assertTrue(exception.getMessage().contains("Cannot inject with several beans match the class"));
     }
 
     @Test
-    @Disabled("Strange behaviour when running with test #givenConfigurationWithSameInjectClass_whenCreate_thenThrowException")
     void givenConfigurationWithSameInjectClassOnInjectAnnotation_whenCreate_thenThrowException() {
         BeanInitializationException exception = assertThrows(BeanInitializationException.class,
                 () -> new ClassConfigurationDependencyInjectionContainer(SameInjectClassOnInjectAnnotationConfiguration.class));
-        assertEquals("Cannot inject with several class match beans. Please, specify the required bean by its name",
-                exception.getMessage());
+        assertTrue(exception.getMessage().contains("Cannot inject with several beans match the class"));
     }
 }

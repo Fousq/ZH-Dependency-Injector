@@ -4,6 +4,7 @@ import kz.zhanbolat.di.annotations.Bean;
 import kz.zhanbolat.di.annotations.BeanConfiguration;
 import kz.zhanbolat.di.annotations.Inject;
 import kz.zhanbolat.di.exception.BeanInitializationException;
+import kz.zhanbolat.di.exception.MultipleBeanException;
 import kz.zhanbolat.di.util.PairGeneric;
 
 import java.lang.reflect.InvocationTargetException;
@@ -41,11 +42,15 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
     }
 
     @Override
-    public <T> T getBean(Class<T> beanClass) {
-        return beanMap.entrySet().stream()
+    public <T> T getBean(Class<T> beanClass) throws MultipleBeanException {
+        List<Object> beans = beanMap.entrySet().stream()
                 .filter(entry -> entry.getKey().getValue().equals(beanClass))
-                .map(Map.Entry::getValue)
-                .findFirst().map(beanClass::cast).orElse(null);
+                .map(Map.Entry::getValue).collect(Collectors.toList());
+        if (beans.size() > 1) {
+            throw new MultipleBeanException("For class " + beanClass + " multiple beans have been found. " +
+                    "Please, specify bean name to get the required one.");
+        }
+        return beans.isEmpty() ? null : beanClass.cast(beans.get(0));
     }
 
     private void initializeBeanMap(Class<?> configurationClass) {
@@ -89,8 +94,8 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
             throw new BeanInitializationException("There's no bean init method for class " + beanClass.getName());
         }
         if (injectBeanInitMethods.size() > 1) {
-            throw new BeanInitializationException("Cannot inject with several class match beans. " +
-                    "Please, specify the required bean by its name");
+            throw new BeanInitializationException("Cannot inject with several beans match the class " + beanClass.getName() +
+                    ". Please, specify the required bean by its name");
         }
         initializeBean(configurationInstance, injectBeanInitMethods.get(0));
     }
@@ -130,10 +135,15 @@ public class ClassConfigurationDependencyInjectionContainer implements Dependenc
             return getBean(injectBeanName);
         } else {
             Class<?> injectClass = parameter.getType();
-            if (Objects.isNull(getBean(injectClass))) {
-                initializeTargetedBean(configurationInstance, injectClass);
+            try {
+                if (Objects.isNull(getBean(injectClass))) {
+                    initializeTargetedBean(configurationInstance, injectClass);
+                }
+                return getBean(injectClass);
+            } catch (MultipleBeanException e) {
+                throw new BeanInitializationException("Cannot inject with several beans match the class " + injectClass.getName() +
+                        ". Please, specify the required bean by its name");
             }
-            return getBean(injectClass);
         }
     }
 }
