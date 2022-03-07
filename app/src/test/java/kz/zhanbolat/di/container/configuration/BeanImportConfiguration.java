@@ -12,7 +12,8 @@ import java.math.BigDecimal;
         EmptyBean.class,
         EmptyConstructParamBean.class,
         InjectConstructParamBean.class,
-        ConstructParamBean.class
+        ConstructParamBean.class,
+        InjectFieldBean.class
 })
 public class BeanImportConfiguration {
 

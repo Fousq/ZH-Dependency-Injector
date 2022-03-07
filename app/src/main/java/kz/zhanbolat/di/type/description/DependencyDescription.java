@@ -3,6 +3,7 @@ package kz.zhanbolat.di.type.description;
 public class DependencyDescription {
     private Class<?> dependencyClass;
     private String beanName;
+    private String fieldName;
 
     public Class<?> getDependencyClass() {
         return dependencyClass;
@@ -18,5 +19,13 @@ public class DependencyDescription {
 
     public void setBeanName(String beanName) {
         this.beanName = beanName;
+    }
+
+    public String getFieldName() {
+        return fieldName;
+    }
+
+    public void setFieldName(String fieldName) {
+        this.fieldName = fieldName;
     }
 }

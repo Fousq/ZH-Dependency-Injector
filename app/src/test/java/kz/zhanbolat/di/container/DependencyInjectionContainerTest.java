@@ -3,9 +3,7 @@ package kz.zhanbolat.di.container;
 import kz.zhanbolat.di.container.builder.BeanBuilderFactory;
 import kz.zhanbolat.di.container.builder.BeanBuilderFactoryImpl;
 import kz.zhanbolat.di.container.configuration.*;
-import kz.zhanbolat.di.container.configuration.beanclasses.ConstructParamBean;
-import kz.zhanbolat.di.container.configuration.beanclasses.InjectConstructParamBean;
-import kz.zhanbolat.di.container.configuration.beanclasses.InjectNameConstructParamBean;
+import kz.zhanbolat.di.container.configuration.beanclasses.*;
 import kz.zhanbolat.di.container.converter.BeanConverterFactory;
 import kz.zhanbolat.di.container.converter.BeanConverterFactoryImpl;
 import kz.zhanbolat.di.exception.BeanInitializationException;
@@ -178,5 +176,45 @@ class DependencyInjectionContainerTest {
         BeanInitializationException exception = assertThrows(BeanInitializationException.class,
                 () -> dependencyInjectionContainer.getBean("injectSameClassContractParamBean"));
         assertTrue(exception.getMessage().contains("There's several beans for class"));
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_InjectFieldBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("injectFieldBean");
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
+
+        assertNotNull(bean);
+        assertEquals(bigDecimalBean, ((InjectFieldBean) bean).getBigDecimal());
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_InjectNameFieldBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportMultipleConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("injectNameFieldBean");
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
+        BigDecimal bigDecimalOneBean = dependencyInjectionContainer.getBean("bigDecimalOneBean", BigDecimal.class);
+
+        assertNotNull(bean);
+        assertEquals(bigDecimalBean, ((InjectNameFieldBean) bean).getBigDecimal());
+        assertEquals(bigDecimalOneBean, ((InjectNameFieldBean) bean).getBigDecimalOne());
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_SkipInjectFieldBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportMultipleConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("skipInjectFieldBean");
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
+
+        assertNotNull(bean);
+        assertEquals(bigDecimalBean, ((SkipInjectFieldBean) bean).getBigDecimal());
+        assertNull(((SkipInjectFieldBean) bean).getInteger());
+        assertNull(((SkipInjectFieldBean) bean).getBigDecimalOne());
     }
 }

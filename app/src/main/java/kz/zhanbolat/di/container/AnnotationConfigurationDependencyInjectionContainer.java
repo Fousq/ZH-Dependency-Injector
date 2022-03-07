@@ -8,6 +8,7 @@ import kz.zhanbolat.di.container.converter.BeanConverterFactory;
 import kz.zhanbolat.di.exception.*;
 import kz.zhanbolat.di.type.BeanSet;
 import kz.zhanbolat.di.type.description.BeanDescription;
+import kz.zhanbolat.di.type.description.DependencyDescription;
 import kz.zhanbolat.di.type.description.MethodBeanDescription;
 
 import java.lang.reflect.InvocationTargetException;
@@ -63,24 +64,24 @@ public class AnnotationConfigurationDependencyInjectionContainer implements Depe
     }
 
     private Object buildBean(BeanDescription beanDescription) {
+        final Map<String, Object> dependencies = new HashMap<>();
         if (Objects.nonNull(beanDescription.getDependencies()) && !beanDescription.getDependencies().isEmpty()) {
-            Object[] dependencies = beanDescription.getDependencies().stream()
-                    .map(dependencyDescription -> {
-                        try {
-                            String beanName = dependencyDescription.getBeanName();
-                            if (Objects.nonNull(beanName) && !beanName.isEmpty()) {
-                                return getBean(beanName, dependencyDescription.getDependencyClass());
-                            } else {
-                                return getBean(dependencyDescription.getDependencyClass());
-                            }
-                        } catch (BeanNotFoundException | MultipleBeanException e) {
-                            throw new BeanInitializationException(e.getMessage(), e);
-                        }
-                    })
-                    .toArray(Object[]::new);
-            return beanBuilderFactory.getBeanBuilder(beanDescription).buildBean(beanDescription, dependencies);
+            for (DependencyDescription dependencyDescription : beanDescription.getDependencies()) {
+                try {
+                    String beanName = dependencyDescription.getBeanName();
+                    Object bean;
+                    if (Objects.nonNull(beanName) && !beanName.isEmpty()) {
+                        bean = getBean(beanName, dependencyDescription.getDependencyClass());
+                    } else {
+                        bean = getBean(dependencyDescription.getDependencyClass());
+                    }
+                    dependencies.put(dependencyDescription.getFieldName(), bean);
+                } catch (BeanNotFoundException | MultipleBeanException e) {
+                    throw new BeanInitializationException(e.getMessage(), e);
+                }
+            }
         }
-        return beanBuilderFactory.getBeanBuilder(beanDescription).buildBean(beanDescription);
+        return beanBuilderFactory.getBeanBuilder(beanDescription).buildBean(beanDescription, dependencies);
     }
 
     private void processImportBeans(Class<?> configurationClass, BeanConverterFactory beanConverterFactory) {

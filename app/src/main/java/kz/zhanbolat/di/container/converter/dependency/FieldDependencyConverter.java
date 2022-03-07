@@ -3,12 +3,13 @@ package kz.zhanbolat.di.container.converter.dependency;
 import kz.zhanbolat.di.annotations.Inject;
 import kz.zhanbolat.di.type.description.DependencyDescription;
 
-import java.lang.reflect.Parameter;
+import java.lang.reflect.Field;
 import java.util.Objects;
 
-public class ParameterDependencyConverter implements DependencyConverter<Parameter> {
+public class FieldDependencyConverter implements DependencyConverter<Field> {
+
     @Override
-    public DependencyDescription convert(Parameter dependencyDefinition) {
+    public DependencyDescription convert(Field dependencyDefinition) {
         final DependencyDescription dependencyDescription = new DependencyDescription();
         Inject injectAnnotation = dependencyDefinition.getAnnotation(Inject.class);
         if (Objects.nonNull(injectAnnotation) && !injectAnnotation.beanName().isEmpty()) {
