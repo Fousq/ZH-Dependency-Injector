@@ -1,8 +1,17 @@
 package kz.zhanbolat.di.container;
 
+import kz.zhanbolat.di.container.builder.BeanBuilderFactory;
+import kz.zhanbolat.di.container.builder.BeanBuilderFactoryImpl;
 import kz.zhanbolat.di.container.configuration.*;
+import kz.zhanbolat.di.container.configuration.beanclasses.ConstructParamBean;
+import kz.zhanbolat.di.container.configuration.beanclasses.InjectConstructParamBean;
+import kz.zhanbolat.di.container.configuration.beanclasses.InjectNameConstructParamBean;
+import kz.zhanbolat.di.container.converter.BeanConverterFactory;
+import kz.zhanbolat.di.container.converter.BeanConverterFactoryImpl;
 import kz.zhanbolat.di.exception.BeanInitializationException;
+import kz.zhanbolat.di.exception.BeanNotFoundException;
 import kz.zhanbolat.di.exception.MultipleBeanException;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -10,18 +19,29 @@ import java.math.BigDecimal;
 import static org.junit.jupiter.api.Assertions.*;
 
 class DependencyInjectionContainerTest {
-    private ClassConfigurationDependencyInjectionContainer dependencyInjectionContainer;
+    private static BeanBuilderFactory beanBuilderFactory;
+    private static BeanConverterFactory beanConverterFactory;
+
+    private AnnotationConfigurationDependencyInjectionContainer dependencyInjectionContainer;
+
+    @BeforeAll
+    public static void init() {
+        beanBuilderFactory = new BeanBuilderFactoryImpl();
+        beanConverterFactory = new BeanConverterFactoryImpl();
+    }
 
     @Test
-    void createBeanWithoutParameters() {
-        dependencyInjectionContainer = new ClassConfigurationDependencyInjectionContainer(ZeroParamConfiguration.class);
+    void createBeanWithoutParameters() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(ZeroParamConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
         Object bean = dependencyInjectionContainer.getBean("noParamsBean");
         assertNotNull(bean);
     }
 
     @Test
-    void createBeanWithParameters() {
-        dependencyInjectionContainer = new ClassConfigurationDependencyInjectionContainer(ParameterConfiguration.class);
+    void createBeanWithParameters() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(ParameterConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
         Object bean = dependencyInjectionContainer.getBean("bigDecimalBean");
         assertNotNull(bean);
     }
@@ -29,32 +49,39 @@ class DependencyInjectionContainerTest {
     @Test
     void givenConfigurationWithoutBeanConfigurationAnnotation_whenCreate_thenThrowException() {
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
-                () -> new ClassConfigurationDependencyInjectionContainer(NoBeanConfigurationAnnotationConfig.class));
-        assertEquals("Provided class is not a configuration class", exception.getMessage());
+                () -> new AnnotationConfigurationDependencyInjectionContainer(NoBeanConfigurationAnnotationConfig.class,
+                        beanConverterFactory, beanBuilderFactory));
+        assertEquals("The configuration class is not annotated with @BeanConfiguration", exception.getMessage());
     }
 
     @Test
     void givenConfigurationWithoutAnyBeans_whenGetBean_thenDoesNotThrowException() {
-        assertDoesNotThrow(() -> new ClassConfigurationDependencyInjectionContainer(NoBeanConfiguration.class));
+        assertDoesNotThrow(() -> new AnnotationConfigurationDependencyInjectionContainer(NoBeanConfiguration.class,
+                beanConverterFactory, beanBuilderFactory));
     }
 
     @Test
-    void givenConfigurationWithoutInjectOnParameter_whenGetBean_thenReturnBean() {
-        dependencyInjectionContainer = new ClassConfigurationDependencyInjectionContainer(NoInjectOnParameterConfiguration.class);
+    void givenConfigurationWithoutInjectOnParameter_whenGetBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(NoInjectOnParameterConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
         BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
         assertNotNull(bigDecimalBean);
     }
 
     @Test
-    void givenConfigurationWithoutBeanInitMethodForInjectParameter_whenCreate_thenThrowException() {
+    void givenConfigurationWithoutBeanInitMethodForInjectParameter_whenGetBean_thenThrowException() {
+         dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(NoBeanMethodForInjectParameterConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
         BeanInitializationException exception = assertThrows(BeanInitializationException.class,
-                () -> new ClassConfigurationDependencyInjectionContainer(NoBeanMethodForInjectParameterConfiguration.class));
-        assertTrue(exception.getMessage().contains("There's no bean init method for name"));
+                () -> dependencyInjectionContainer.getBean("bigDecimalBeanByName"));
+        assertTrue(exception.getMessage().contains("integerBean"));
     }
 
     @Test
     void givenConfigurationWithSeveralBeanMethods_whenGetBean_thenReturnBeanByClass() throws MultipleBeanException {
-        dependencyInjectionContainer = new ClassConfigurationDependencyInjectionContainer(ParameterConfiguration.class);
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(ParameterConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
         BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean(BigDecimal.class);
         Integer integerBean = dependencyInjectionContainer.getBean(Integer.class);
 
@@ -63,16 +90,93 @@ class DependencyInjectionContainerTest {
     }
 
     @Test
-    void givenConfigurationWithSameInjectClass_whenCreate_thenThrowException() {
+    void givenConfigurationWithSameInjectClass_whenGetBean_thenThrowException() {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(SameInjectClassConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
         BeanInitializationException exception = assertThrows(BeanInitializationException.class,
-                () -> new ClassConfigurationDependencyInjectionContainer(SameInjectClassConfiguration.class));
-        assertTrue(exception.getMessage().contains("Cannot inject with several beans match the class"));
+                () -> dependencyInjectionContainer.getBean("bigDecimal"));
+        assertTrue(exception.getMessage().contains("There's several beans for class"));
     }
 
     @Test
-    void givenConfigurationWithSameInjectClassOnInjectAnnotation_whenCreate_thenThrowException() {
+    void givenConfigurationWithSameInjectClassOnInjectAnnotation_whenGetBean_thenThrowException() {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(SameInjectClassOnInjectAnnotationConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
         BeanInitializationException exception = assertThrows(BeanInitializationException.class,
-                () -> new ClassConfigurationDependencyInjectionContainer(SameInjectClassOnInjectAnnotationConfiguration.class));
-        assertTrue(exception.getMessage().contains("Cannot inject with several beans match the class"));
+                () -> dependencyInjectionContainer.getBean("bigDecimalInject"));
+        assertTrue(exception.getMessage().contains("There's several beans for class"));
+    }
+
+    @Test
+    void givenConfigurationWithSameBeanNames_whenCreate_thenThrowException() {
+        assertThrows(IllegalStateException.class, () -> new AnnotationConfigurationDependencyInjectionContainer(SameBeanNamesConfiguration.class,
+                beanConverterFactory, beanBuilderFactory));
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_EmptyBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("emptyBean");
+        assertNotNull(bean);
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_EmptyConstructParamBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("emptyConstructParamBean");
+        assertNotNull(bean);
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_InjectNameConstructParamBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportMultipleConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("injectNameConstructParamBean");
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
+        BigDecimal bigDecimalOneBean = dependencyInjectionContainer.getBean("bigDecimalOneBean", BigDecimal.class);
+
+        assertNotNull(bean);
+        assertEquals(bigDecimalBean, ((InjectNameConstructParamBean) bean).getBigDecimal());
+        assertEquals(bigDecimalOneBean, ((InjectNameConstructParamBean) bean).getBigDecimalOne());
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_InjectConstructParamBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("injectConstructParamBean");
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
+
+        assertNotNull(bean);
+        assertEquals(bigDecimalBean, ((InjectConstructParamBean) bean).getBigDecimal());
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_ConstructParamBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object bean = dependencyInjectionContainer.getBean("constructParamBean");
+        BigDecimal bigDecimalBean = dependencyInjectionContainer.getBean("bigDecimalBean", BigDecimal.class);
+
+        assertNotNull(bean);
+        assertEquals(bigDecimalBean, ((ConstructParamBean) bean).getBigDecimal());
+    }
+
+    @Test
+    void givenBeanImportConfiguration_whenGetBean_InjectSameClassConstructParamBean_thenReturnBean() {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanImportMultipleConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        BeanInitializationException exception = assertThrows(BeanInitializationException.class,
+                () -> dependencyInjectionContainer.getBean("injectSameClassContractParamBean"));
+        assertTrue(exception.getMessage().contains("There's several beans for class"));
     }
 }
