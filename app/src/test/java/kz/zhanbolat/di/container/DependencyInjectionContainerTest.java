@@ -217,4 +217,20 @@ class DependencyInjectionContainerTest {
         assertNull(((SkipInjectFieldBean) bean).getInteger());
         assertNull(((SkipInjectFieldBean) bean).getBigDecimalOne());
     }
+
+    @Test
+    void givenBeanTypeConfiguration_whenGetBean_thenReturnBean() throws BeanNotFoundException {
+        dependencyInjectionContainer = new AnnotationConfigurationDependencyInjectionContainer(BeanTypeConfiguration.class,
+                beanConverterFactory, beanBuilderFactory);
+
+        Object singletonBigDecimalBean = dependencyInjectionContainer.getBean("singletonObjectBean");
+        Object duplicateSingletonBigDecimalBean = dependencyInjectionContainer.getBean("singletonObjectBean");
+        Object prototypeBigDecimalBean = dependencyInjectionContainer.getBean("prototypeObjectBean");
+        Object duplicatePrototypeBigDecimalBean = dependencyInjectionContainer.getBean("prototypeObjectBean");
+
+        assertNotNull(singletonBigDecimalBean);
+        assertNotNull(prototypeBigDecimalBean);
+        assertEquals(singletonBigDecimalBean, duplicateSingletonBigDecimalBean);
+        assertNotEquals(prototypeBigDecimalBean, duplicatePrototypeBigDecimalBean);
+    }
 }

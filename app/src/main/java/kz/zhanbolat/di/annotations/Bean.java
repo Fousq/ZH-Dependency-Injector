@@ -9,4 +9,5 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 public @interface Bean {
     String name();
+    BeanType type() default BeanType.SINGLETON;
 }

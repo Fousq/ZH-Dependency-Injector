@@ -3,6 +3,7 @@ package kz.zhanbolat.di.container;
 import kz.zhanbolat.di.annotations.Bean;
 import kz.zhanbolat.di.annotations.BeanConfiguration;
 import kz.zhanbolat.di.annotations.BeanImport;
+import kz.zhanbolat.di.annotations.BeanType;
 import kz.zhanbolat.di.container.builder.BeanBuilderFactory;
 import kz.zhanbolat.di.container.converter.BeanConverterFactory;
 import kz.zhanbolat.di.exception.*;
@@ -14,11 +15,13 @@ import kz.zhanbolat.di.type.description.MethodBeanDescription;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
 
 public class AnnotationConfigurationDependencyInjectionContainer implements DependencyInjectionContainer {
 
     private BeanSet beanSet;
+    private Map<BeanDescription, Object> singletonBeans;
     private BeanBuilderFactory beanBuilderFactory;
 
     public AnnotationConfigurationDependencyInjectionContainer(Class<?> configurationClass,
@@ -26,6 +29,7 @@ public class AnnotationConfigurationDependencyInjectionContainer implements Depe
                                                                BeanBuilderFactory beanBuilderFactory) {
         this.beanBuilderFactory = beanBuilderFactory;
         beanSet = new BeanSet();
+        singletonBeans = new ConcurrentHashMap<>();
         BeanConfiguration beanConfiguration = configurationClass.getAnnotation(BeanConfiguration.class);
         if (Objects.isNull(beanConfiguration)) {
             throw new IllegalArgumentException("The configuration class is not annotated with @BeanConfiguration");
@@ -40,7 +44,7 @@ public class AnnotationConfigurationDependencyInjectionContainer implements Depe
                 .filter(description -> description.getBeanName().equals(beanName))
                 .findFirst()
                 .orElseThrow(() -> new BeanNotFoundException("The bean with name " + beanName + " is not found"));
-        return buildBean(beanDescription);
+        return getBeanByDescription(beanDescription);
     }
 
     @Override
@@ -49,7 +53,7 @@ public class AnnotationConfigurationDependencyInjectionContainer implements Depe
                 .filter(description -> Objects.equals(description.getBeanName(), beanName) && description.getBeanClass().isAssignableFrom(beanClass))
                 .findFirst()
                 .orElseThrow(() -> new BeanNotFoundException("The bean with name " + beanName + " is not found"));
-        return beanClass.cast(buildBean(beanDescription));
+        return beanClass.cast(getBeanByDescription(beanDescription));
     }
 
     @Override
@@ -60,7 +64,14 @@ public class AnnotationConfigurationDependencyInjectionContainer implements Depe
         if (beanDescriptionsByClass.size() > 1) {
             throw new MultipleBeanException("There's several beans for class " + beanClass.getSimpleName());
         }
-        return beanClass.cast(buildBean(beanDescriptionsByClass.get(0)));
+        return beanClass.cast(getBeanByDescription(beanDescriptionsByClass.get(0)));
+    }
+
+    private Object getBeanByDescription(BeanDescription beanDescription) {
+        if (singletonBeans.containsKey(beanDescription)) {
+            return singletonBeans.get(beanDescription);
+        }
+        return buildBean(beanDescription);
     }
 
     private Object buildBean(BeanDescription beanDescription) {
@@ -81,7 +92,11 @@ public class AnnotationConfigurationDependencyInjectionContainer implements Depe
                 }
             }
         }
-        return beanBuilderFactory.getBeanBuilder(beanDescription).buildBean(beanDescription, dependencies);
+        Object bean = beanBuilderFactory.getBeanBuilder(beanDescription).buildBean(beanDescription, dependencies);
+        if (BeanType.SINGLETON.equals(beanDescription.getBeanType())) {
+            singletonBeans.put(beanDescription, bean);
+        }
+        return bean;
     }
 
     private void processImportBeans(Class<?> configurationClass, BeanConverterFactory beanConverterFactory) {

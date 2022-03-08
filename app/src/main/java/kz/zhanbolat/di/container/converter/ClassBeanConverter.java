@@ -67,6 +67,7 @@ public class ClassBeanConverter implements BeanConverter<Class<?>> {
         }
         beanDescription.setDependencies(dependencies);
         beanDescription.setBeanConstructor(constructor);
+        beanDescription.setBeanType(beanAnnotation.type());
         return beanDescription;
     }
 }

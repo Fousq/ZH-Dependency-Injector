@@ -32,6 +32,7 @@ public class MethodBeanConverter implements BeanConverter<Method> {
         beanDescription.setBeanName(beanAnnotation.name());
         beanDescription.setBeanClass(beanDefinition.getReturnType());
         beanDescription.setMethod(beanDefinition);
+        beanDescription.setBeanType(beanAnnotation.type());
         Parameter[] parameters = beanDefinition.getParameters();
         if (parameters.length > 0) {
             List<DependencyDescription> dependencyDescriptionList = Arrays.stream(parameters)
